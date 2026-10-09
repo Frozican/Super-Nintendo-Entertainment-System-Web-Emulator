@@ -173,7 +173,7 @@
     </script>
     <div id="script-placeholder"></div>
 
-    <!-- Erweiterte Logik für Tastatur & echte Gamepads -->
+        <!-- Erweiterte Logik für Tastatur & echte Gamepads -->
     <script>
       (function() {
         const activeBars = {};
@@ -226,25 +226,37 @@
           }
         }
 
-        window.addEventListener('keydown', (e) => { startBar(keyMap[e.key]); });
-        window.addEventListener('keyup', (e) => { stopBar(keyMap[e.key]); });
+        // Nutzen von capture:true, um die Tasten vor dem Emulator abzufangen!
+        window.addEventListener('keydown', (e) => { 
+          if (keyMap[e.key]) startBar(keyMap[e.key]); 
+        }, { capture: true, passive: true });
+
+        window.addEventListener('keyup', (e) => { 
+          if (keyMap[e.key]) stopBar(keyMap[e.key]); 
+        }, { capture: true, passive: true });
 
         const prevGamepadState = {};
 
         function renderTimeline() {
+          // Direktes Abfragen des Gamepads (wird vom Emulator nie blockiert)
           const gamepads = navigator.getGamepads();
-          if (gamepads && gamepads[0]) {
-            const gp = gamepads[0];
-            for (let btnIdx in gamepadMap) {
-              const action = gamepadMap[btnIdx];
-              const isPressed = gp.buttons[btnIdx]?.pressed;
+          if (gamepads) {
+            // Durchsuche alle angeschlossenen Gamepads
+            for (let i = 0; i < gamepads.length; i++) {
+              const gp = gamepads[i];
+              if (!gp) continue;
               
-              if (isPressed && !prevGamepadState[action]) {
-                startBar(action);
-                prevGamepadState[action] = true;
-              } else if (!isPressed && prevGamepadState[action]) {
-                stopBar(action);
-                prevGamepadState[action] = false;
+              for (let btnIdx in gamepadMap) {
+                const action = gamepadMap[btnIdx];
+                const isPressed = gp.buttons[btnIdx]?.pressed;
+                
+                if (isPressed && !prevGamepadState[action]) {
+                  startBar(action);
+                  prevGamepadState[action] = true;
+                } else if (!isPressed && prevGamepadState[action]) {
+                  stopBar(action);
+                  prevGamepadState[action] = false;
+                }
               }
             }
           }
@@ -281,5 +293,3 @@
         requestAnimationFrame(renderTimeline);
       })();
     </script>
-  </body>
-</html>
