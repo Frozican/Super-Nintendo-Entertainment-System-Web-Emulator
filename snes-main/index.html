@@ -1,0 +1,114 @@
+<html>
+  <head>
+    <!--HTML file auto generated using EmulatorJS codehelper-->
+    <style>
+      body {
+        background-color: rgb(51, 51, 51);
+      }
+
+      #game-container {
+        width: 640px;
+        height: 480px;
+        max-width: 100%;
+        margin: 0 auto;
+      }
+
+      #load-controls {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+      }
+
+      #load-game {
+        font-size: 2em;
+        padding: 0.5em 1em;
+        border-radius: 0.5em;
+        border: 0.1em solid #fff;
+        background-color: #000;
+        color: #fff;
+        cursor: pointer;
+        outline: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="game"></div>
+
+      <div id="load-controls">
+        <button id="load-game">Enter</button>
+        <label for="load-rom" style="display:block; margin-top:1em; color:#fff; cursor:pointer; text-decoration:underline;">or load a ROM file</label>
+        <input type="file" id="load-rom" accept=".smc,.sfc,.zip" style="display:none;">
+      </div>
+    </div>
+
+    <!-- Configure display for mobile devices -->
+    <script>
+      let isMobile = /Mobile/.test(navigator.userAgent);
+      if (isMobile) {
+        document.getElementById("game-container").style.width = "100%";
+        document.getElementById("game-container").style.height = "auto";
+      }
+    </script>
+
+    <script type="module">
+      window.EJS_player = "#game";
+      window.EJS_core = "snes";
+      window.EJS_gameName = "EarthBound";
+      window.EJS_color = "#0064ff";
+      window.EJS_startOnLoaded = true;
+      window.EJS_pathtodata = "code/";
+      window.EJS_gameUrl = "games/" + EJS_gameName + ".smc";
+      window.states_path = "states/";
+      window.EJS_loadStateURL = states_path + "EarthBound.state";
+      window.EJS_DEBUG_XX = true;
+    </script>
+    <script type="module">
+      let loader_path = EJS_pathtodata + "loader.js";
+
+      let startEmulator = () => {
+        let loader_script = document.createElement("script");
+        loader_script.type = "module";
+        loader_script.src = loader_path;
+        document.getElementById("script-placeholder").appendChild(loader_script);
+        document.getElementById("load-controls")?.remove();
+      };
+
+      let loadGame = async () => {
+        // Check if ROM file exists before loading
+        try {
+          let response = await fetch(EJS_gameUrl, { method: 'HEAD' });
+          if (!response.ok) {
+            document.getElementById("load-game").textContent = "ROM not found";
+            document.getElementById("load-game").disabled = true;
+            return;
+          }
+        } catch (e) {
+          document.getElementById("load-game").textContent = "ROM not found";
+          document.getElementById("load-game").disabled = true;
+          return;
+        }
+        startEmulator();
+      };
+
+      let loadRom = (e) => {
+        let file = e.target.files[0];
+        if (!file) return;
+        window.EJS_gameUrl = URL.createObjectURL(file);
+        window.EJS_gameName = file.name.replace(/\.[^.]+$/, '');
+        // Load save state if EarthBound, otherwise skip
+        if (!/earthbound-meditation/i.test(file.name)) {
+          delete window.EJS_loadStateURL;
+        }
+        startEmulator();
+      };
+
+      document.getElementById("load-game").addEventListener("click", loadGame);
+      document.getElementById("load-rom").addEventListener("change", loadRom);
+      document.getElementById("load-game").focus();
+    </script>
+    <div id="script-placeholder"></div>
+  </body>
+</html>
