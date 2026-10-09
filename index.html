@@ -31,6 +31,54 @@
         cursor: pointer;
         outline: none;
       }
+
+      /* Leicht durchsichtiges Styling für die untere linke Ecke */
+      #input-timeline-container {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        width: 240px;
+        background: rgba(0, 0, 0, 0.45); /* Durchsichtiger Hintergrund */
+        border-radius: 8px;
+        padding: 8px;
+        font-family: 'Courier New', monospace;
+        z-index: 99999;
+        color: rgba(255, 255, 255, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        pointer-events: none; /* Verhindert Klicks auf die Box */
+      }
+      .timeline-row {
+        display: flex;
+        align-items: center;
+        margin: 3px 0;
+        height: 14px;
+      }
+      .timeline-row .label {
+        width: 32px;
+        text-align: left;
+        font-weight: bold;
+        font-size: 11px;
+        letter-spacing: 0.5px;
+      }
+      .timeline-row .lane {
+        position: relative;
+        flex-grow: 1;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.07);
+        overflow: hidden;
+        border-radius: 2px;
+      }
+      .input-bar {
+        position: absolute;
+        right: 0;
+        top: 1px;
+        height: 12px;
+        background: rgba(0, 255, 204, 0.75); /* Leicht transparentes Neon-Türkis */
+        box-shadow: 0 0 4px rgba(0, 255, 204, 0.5);
+        border-radius: 1px;
+        min-width: 2px;
+      }
     </style>
   </head>
   <body>
@@ -42,6 +90,20 @@
         <label for="load-rom" style="display:block; margin-top:1em; color:#fff; cursor:pointer; text-decoration:underline;">or load a ROM file</label>
         <input type="file" id="load-rom" accept=".smc,.sfc,.zip" style="display:none;">
       </div>
+    </div>
+
+    <!-- Container für alle 10 SNES-Tasten -->
+    <div id="input-timeline-container">
+      <div class="timeline-row" data-key="up"><span class="label">↑</span><div class="lane"></div></div>
+      <div class="timeline-row" data-key="down"><span class="label">↓</span><div class="lane"></div></div>
+      <div class="timeline-row" data-key="left"><span class="label">←</span><div class="lane"></div></div>
+      <div class="timeline-row" data-key="right"><span class="label">→</span><div class="lane"></div></div>
+      <div class="timeline-row" data-key="button-y"><span class="label">Y</span><div class="lane"></div></div>
+      <div class="timeline-row" data-key="button-x"><span class="label">X</span><div class="lane"></div></div>
+      <div class="timeline-row" data-key="button-b"><span class="label">B</span><div class="lane"></div></div>
+      <div class="timeline-row" data-key="button-a"><span class="label">A</span><div class="lane"></div></div>
+      <div class="timeline-row" data-key="select"><span class="label">SEL</span><div class="lane"></div></div>
+      <div class="timeline-row" data-key="start"><span class="label">STA</span><div class="lane"></div></div>
     </div>
 
     <!-- Configure display for mobile devices -->
@@ -97,7 +159,7 @@
         let file = e.target.files[0];
         if (!file) return;
         window.EJS_gameUrl = URL.createObjectURL(file);
-        window.EJS_gameName = file.name.replace(/\.[^.]+$/, '');
+        window.EJS_gameName = file.name.replace(/\.[^.]+\$/, '');
         // Load save state if EarthBound, otherwise skip
         if (!/earthbound-meditation/i.test(file.name)) {
           delete window.EJS_loadStateURL;
@@ -110,5 +172,114 @@
       document.getElementById("load-game").focus();
     </script>
     <div id="script-placeholder"></div>
+
+    <!-- Erweiterte Logik für Tastatur & echte Gamepads -->
+    <script>
+      (function() {
+        const activeBars = {};
+        const speed = 2.5; // Geschwindigkeit der Balken
+
+        // Tasten-Mapping für Tastatur
+        const keyMap = {
+          'ArrowUp': 'up',
+          'ArrowDown': 'down',
+          'ArrowLeft': 'left',
+          'ArrowRight': 'right',
+          'x': 'button-a',
+          'z': 'button-b',
+          's': 'button-x',
+          'a': 'button-y',
+          'Enter': 'start',
+          ' ': 'select'
+        };
+
+        // Tasten-Mapping für standardisierte Gamepads
+        const gamepadMap = {
+          12: 'up',
+          13: 'down',
+          14: 'left',
+          15: 'right',
+          0: 'button-b',
+          1: 'button-a',
+          2: 'button-y',
+          3: 'button-x',
+          8: 'select',
+          9: 'start'
+        };
+
+        function startBar(action) {
+          if (!action || activeBars[action]) return;
+          const lane = document.querySelector(`.timeline-row[data-key="${action}"] .lane`);
+          if (!lane) return;
+
+          const bar = document.createElement('div');
+          bar.className = 'input-bar';
+          bar.style.width = '0px';
+          lane.appendChild(bar);
+
+          activeBars[action] = { element: bar, width: 0, isHolding: true };
+        }
+
+        function stopBar(action) {
+          if (action && activeBars[action]) {
+            activeBars[action].isHolding = false;
+          }
+        }
+
+        window.addEventListener('keydown', (e) => { startBar(keyMap[e.key]); });
+        window.addEventListener('keyup', (e) => { stopBar(keyMap[e.key]); });
+
+        const prevGamepadState = {};
+
+        function renderTimeline() {
+          const gamepads = navigator.getGamepads();
+          if (gamepads && gamepads[0]) {
+            const gp = gamepads[0];
+            for (let btnIdx in gamepadMap) {
+              const action = gamepadMap[btnIdx];
+              const isPressed = gp.buttons[btnIdx]?.pressed;
+              
+              if (isPressed && !prevGamepadState[action]) {
+                startBar(action);
+                prevGamepadState[action] = true;
+              } else if (!isPressed && prevGamepadState[action]) {
+                stopBar(action);
+                prevGamepadState[action] = false;
+              }
+            }
+          }
+
+          const allBars = document.querySelectorAll('.input-bar');
+          allBars.forEach(bar => {
+            let barData = null;
+            for (let action in activeBars) {
+              if (activeBars[action].element === bar) {
+                barData = activeBars[action];
+                break;
+              }
+            }
+
+            if (barData && barData.isHolding) {
+              barData.width += speed;
+              bar.style.width = barData.width + 'px';
+            } else {
+              let currentRight = parseInt(bar.style.right || 0);
+              let newRight = currentRight + speed;
+              bar.style.right = newRight + 'px';
+
+              if (newRight > 240) { bar.remove(); }
+            }
+          });
+
+          for (let action in activeBars) {
+            if (!activeBars[action].isHolding) { delete activeBars[action]; }
+          }
+
+          requestAnimationFrame(renderTimeline);
+        }
+
+        requestAnimationFrame(renderTimeline);
+      })();
+    </script>
   </body>
 </html>
