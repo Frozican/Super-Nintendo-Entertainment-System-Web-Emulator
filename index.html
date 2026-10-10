@@ -15,9 +15,12 @@
       --accent: #00e5d0;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
-    html, body {
+    html,
+    body {
       min-height: 100%;
       margin: 0;
     }
@@ -109,6 +112,67 @@
       user-select: none;
     }
 
+    /* HUD visibility toggle */
+    #input-hud-toggle {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 100000;
+      pointer-events: auto;
+      padding: 7px 10px;
+      border: 1px solid var(--hud-border);
+      border-radius: 8px;
+      background: rgba(12, 18, 23, 0.88);
+      color: var(--hud-text);
+      font: 600 12px/1.2 system-ui, sans-serif;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #input-hud-toggle:hover {
+      background: rgba(25, 38, 45, 0.96);
+    }
+
+    #input-hud-toggle:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    #input-timeline-container.is-hidden {
+      display: none;
+    }
+
+    /* Compact HUD in fullscreen */
+    #input-timeline-container.is-fullscreen-hud {
+      left: 12px;
+      bottom: 12px;
+      width: min(230px, calc(100vw - 24px));
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+
+    #input-timeline-container.is-fullscreen-hud .timeline-row {
+      height: 12px;
+      margin: 2px 0;
+      gap: 7px;
+    }
+
+    #input-timeline-container.is-fullscreen-hud .timeline-row .label {
+      flex-basis: 25px;
+      font-size: 10px;
+    }
+
+    #input-timeline-container.is-fullscreen-hud .timeline-row .lane {
+      height: 6px;
+    }
+
+    #input-hud-toggle.is-fullscreen-toggle {
+      top: 8px;
+      right: 8px;
+      padding: 5px 7px;
+      font-size: 11px;
+    }
+
     .timeline-row {
       display: flex;
       align-items: center;
@@ -187,17 +251,63 @@
   </main>
 
   <aside id="input-timeline-container" aria-label="Controller input timeline">
-    <div class="timeline-row" data-key="up"><span class="label">↑</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="down"><span class="label">↓</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="left"><span class="label">←</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="right"><span class="label">→</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="button-y"><span class="label">Y</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="button-x"><span class="label">X</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="button-b"><span class="label">B</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="button-a"><span class="label">A</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="select"><span class="label">SEL</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="start"><span class="label">STA</span><div class="lane"></div></div>
+    <div class="timeline-row" data-key="up">
+      <span class="label">↑</span>
+      <div class="lane"></div>
+    </div>
+
+    <div class="timeline-row" data-key="down">
+      <span class="label">↓</span>
+      <div class="lane"></div>
+    </div>
+
+    <div class="timeline-row" data-key="left">
+      <span class="label">←</span>
+      <div class="lane"></div>
+    </div>
+
+    <div class="timeline-row" data-key="right">
+      <span class="label">→</span>
+      <div class="lane"></div>
+    </div>
+
+    <div class="timeline-row" data-key="button-y">
+      <span class="label">Y</span>
+      <div class="lane"></div>
+    </div>
+
+    <div class="timeline-row" data-key="button-x">
+      <span class="label">X</span>
+      <div class="lane"></div>
+    </div>
+
+    <div class="timeline-row" data-key="button-b">
+      <span class="label">B</span>
+      <div class="lane"></div>
+    </div>
+
+    <div class="timeline-row" data-key="button-a">
+      <span class="label">A</span>
+      <div class="lane"></div>
+    </div>
+
+    <div class="timeline-row" data-key="select">
+      <span class="label">SEL</span>
+      <div class="lane"></div>
+    </div>
+
+    <div class="timeline-row" data-key="start">
+      <span class="label">STA</span>
+      <div class="lane"></div>
+    </div>
   </aside>
+
+  <button
+    id="input-hud-toggle"
+    type="button"
+    aria-controls="input-timeline-container"
+    aria-pressed="true"
+  >Hide Input HUD</button>
 
   <div id="script-placeholder"></div>
 
@@ -225,8 +335,8 @@
 
       function startEmulator() {
         if (emulatorStarted) return;
-        emulatorStarted = true;
 
+        emulatorStarted = true;
         loadButton.disabled = true;
         status.textContent = "Starting EmulatorJS…";
 
@@ -278,7 +388,10 @@
         const file = event.target.files?.[0];
         if (!file) return;
 
-        if (selectedRomUrl) URL.revokeObjectURL(selectedRomUrl);
+        if (selectedRomUrl) {
+          URL.revokeObjectURL(selectedRomUrl);
+        }
+
         selectedRomUrl = URL.createObjectURL(file);
 
         window.EJS_gameUrl = selectedRomUrl;
@@ -286,7 +399,8 @@
 
         // Only attempt the bundled state for the intended default game.
         if (/^EarthBound\.smc$/i.test(file.name)) {
-          window.EJS_loadStateURL = window.states_path + "EarthBound.state";
+          window.EJS_loadStateURL =
+            window.states_path + "EarthBound.state";
         } else {
           delete window.EJS_loadStateURL;
         }
@@ -296,6 +410,68 @@
 
       loadButton.addEventListener("click", loadDefaultGame);
       romInput.addEventListener("change", loadRom);
+    })();
+  </script>
+
+  <script>
+    (() => {
+      const hud = document.getElementById("input-timeline-container");
+      const toggle = document.getElementById("input-hud-toggle");
+
+      // Keep placeholders so the HUD can return to its original location.
+      const hudHome = document.createComment("input HUD home");
+      const toggleHome = document.createComment("input HUD toggle home");
+
+      hud.parentNode.insertBefore(hudHome, hud);
+      toggle.parentNode.insertBefore(toggleHome, toggle);
+
+      // Show or hide the timeline without disabling input tracking.
+      toggle.addEventListener("click", () => {
+        const isHidden = hud.classList.toggle("is-hidden");
+
+        toggle.textContent = isHidden
+          ? "Show Input HUD"
+          : "Hide Input HUD";
+
+        toggle.setAttribute("aria-pressed", String(!isHidden));
+      });
+
+      function syncFullscreenHud() {
+        const fullscreenRoot = document.fullscreenElement;
+
+        if (fullscreenRoot) {
+          // Place the overlay inside the fullscreen element.
+          if (fullscreenRoot !== hud.parentElement) {
+            fullscreenRoot.appendChild(hud);
+          }
+
+          if (fullscreenRoot !== toggle.parentElement) {
+            fullscreenRoot.appendChild(toggle);
+          }
+
+          hud.classList.add("is-fullscreen-hud");
+          toggle.classList.add("is-fullscreen-toggle");
+        } else {
+          hud.classList.remove("is-fullscreen-hud");
+          toggle.classList.remove("is-fullscreen-toggle");
+
+          if (hudHome.parentNode) {
+            hudHome.parentNode.insertBefore(hud, hudHome.nextSibling);
+          }
+
+          if (toggleHome.parentNode) {
+            toggleHome.parentNode.insertBefore(
+              toggle,
+              toggleHome.nextSibling
+            );
+          }
+        }
+      }
+
+      document.addEventListener("fullscreenchange", syncFullscreenHud);
+      document.addEventListener("webkitfullscreenchange", syncFullscreenHud);
+
+      syncFullscreenHud();
     })();
   </script>
 
@@ -341,6 +517,7 @@
       const active = new Map();
       const heldSources = new Map();
       const keyboardSources = new Set();
+
       let previousGamepadSources = new Set();
       let previousTime = 0;
 
@@ -348,6 +525,7 @@
         for (const heldAction of heldSources.values()) {
           if (heldAction === action) return true;
         }
+
         return false;
       }
 
@@ -361,6 +539,7 @@
         element.className = "input-bar";
         element.style.width = "0px";
         element.style.right = "0px";
+
         lane.appendChild(element);
 
         const segment = {
@@ -381,6 +560,7 @@
 
         segment.holding = false;
         segment.age = 0;
+
         active.delete(action);
       }
 
@@ -390,7 +570,9 @@
         const wasHeld = isActionHeld(action);
         heldSources.set(source, action);
 
-        if (!wasHeld) startSegment(action);
+        if (!wasHeld) {
+          startSegment(action);
+        }
       }
 
       function releaseSource(source) {
@@ -399,22 +581,29 @@
 
         heldSources.delete(source);
 
-        if (!isActionHeld(action)) stopSegment(action);
+        if (!isActionHeld(action)) {
+          stopSegment(action);
+        }
       }
 
-      // Observe keyboard events without cancelling them or changing their
-      // propagation. EmulatorJS must receive the same events as the HUD.
-      // Use bubbling phase (no capture) and never call preventDefault/stopPropagation.
+      /*
+       * Observe keyboard events without cancelling them or changing their
+       * propagation. EmulatorJS must receive the same events as the HUD.
+       */
       window.addEventListener("keydown", event => {
         const action = keyboardMap[event.code];
         if (!action) return;
 
         const source = "keyboard:" + event.code;
+
         if (!keyboardSources.has(source)) {
           keyboardSources.add(source);
           pressSource(source, action);
         }
-      }, { capture: false, passive: true });
+      }, {
+        capture: false,
+        passive: true
+      });
 
       window.addEventListener("keyup", event => {
         const source = "keyboard:" + event.code;
@@ -422,25 +611,36 @@
 
         keyboardSources.delete(source);
         releaseSource(source);
-      }, { capture: false, passive: true });
+      }, {
+        capture: false,
+        passive: true
+      });
 
       function releaseKeyboardInputs() {
-        for (const source of keyboardSources) releaseSource(source);
+        for (const source of keyboardSources) {
+          releaseSource(source);
+        }
+
         keyboardSources.clear();
       }
 
       window.addEventListener("blur", releaseKeyboardInputs);
+
       document.addEventListener("visibilitychange", () => {
-        if (document.hidden) releaseKeyboardInputs();
+        if (document.hidden) {
+          releaseKeyboardInputs();
+        }
       });
 
       function renderTimeline(timestamp) {
         const dt = previousTime
           ? Math.min((timestamp - previousTime) / 1000, 0.05)
           : 0;
+
         previousTime = timestamp;
 
         const currentGamepadSources = new Set();
+
         const gamepads = navigator.getGamepads
           ? navigator.getGamepads()
           : [];
@@ -478,7 +678,9 @@
           }
 
           const laneWidth = segment.element.parentElement.clientWidth;
-          const right = segment.holding ? 0 : segment.age * SPEED;
+          const right = segment.holding
+            ? 0
+            : segment.age * SPEED;
 
           if (right > laneWidth + segment.width) {
             segment.element.remove();
