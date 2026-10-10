@@ -1,182 +1,9 @@
-<html>
-  <head>
-    <style>
-      body {
-        background-color: rgb(51, 51, 51);
-      }
-
-      #game-container {
-        width: 640px;
-        height: 480px;
-        max-width: 100%;
-        margin: 0 auto;
-      }
-
-      #load-controls {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center;
-      }
-
-      #load-game {
-        font-size: 2em;
-        padding: 0.5em 1em;
-        border-radius: 0.5em;
-        border: 0.1em solid #fff;
-        background-color: #000;
-        color: #fff;
-        cursor: pointer;
-        outline: none;
-      }
-
-      /* Leicht durchsichtiges Styling für die untere linke Ecke */
-      #input-timeline-container {
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        width: 240px;
-        background: rgba(0, 0, 0, 0.45); /* Durchsichtiger Hintergrund */
-        border-radius: 8px;
-        padding: 8px;
-        font-family: 'Courier New', monospace;
-        z-index: 99999;
-        color: rgba(255, 255, 255, 0.85);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        pointer-events: none; /* Verhindert Klicks auf die Box */
-      }
-      .timeline-row {
-        display: flex;
-        align-items: center;
-        margin: 3px 0;
-        height: 14px;
-      }
-      .timeline-row .label {
-        width: 32px;
-        text-align: left;
-        font-weight: bold;
-        font-size: 11px;
-        letter-spacing: 0.5px;
-      }
-      .timeline-row .lane {
-        position: relative;
-        flex-grow: 1;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.07);
-        overflow: hidden;
-        border-radius: 2px;
-      }
-      .input-bar {
-        position: absolute;
-        right: 0;
-        top: 1px;
-        height: 12px;
-        background: rgba(0, 255, 204, 0.75); /* Leicht transparentes Neon-Türkis */
-        box-shadow: 0 0 4px rgba(0, 255, 204, 0.5);
-        border-radius: 1px;
-        min-width: 2px;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="game-container">
-      <div id="game"></div>
-
-      <div id="load-controls">
-        <button id="load-game">Enter</button>
-        <label for="load-rom" style="display:block; margin-top:1em; color:#fff; cursor:pointer; text-decoration:underline;">or load a ROM file</label>
-        <input type="file" id="load-rom" accept=".smc,.sfc,.zip" style="display:none;">
-      </div>
-    </div>
-
-    <!-- Container für alle 10 SNES-Tasten -->
-    <div id="input-timeline-container">
-      <div class="timeline-row" data-key="up"><span class="label">↑</span><div class="lane"></div></div>
-      <div class="timeline-row" data-key="down"><span class="label">↓</span><div class="lane"></div></div>
-      <div class="timeline-row" data-key="left"><span class="label">←</span><div class="lane"></div></div>
-      <div class="timeline-row" data-key="right"><span class="label">→</span><div class="lane"></div></div>
-      <div class="timeline-row" data-key="button-y"><span class="label">Y</span><div class="lane"></div></div>
-      <div class="timeline-row" data-key="button-x"><span class="label">X</span><div class="lane"></div></div>
-      <div class="timeline-row" data-key="button-b"><span class="label">B</span><div class="lane"></div></div>
-      <div class="timeline-row" data-key="button-a"><span class="label">A</span><div class="lane"></div></div>
-      <div class="timeline-row" data-key="select"><span class="label">SEL</span><div class="lane"></div></div>
-      <div class="timeline-row" data-key="start"><span class="label">STA</span><div class="lane"></div></div>
-    </div>
-
-    <!-- Configure display for mobile devices -->
-    <script>
-      let isMobile = /Mobile/.test(navigator.userAgent);
-      if (isMobile) {
-        document.getElementById("game-container").style.width = "100%";
-        document.getElementById("game-container").style.height = "auto";
-      }
-    </script>
-
-    <script type="module">
-      window.EJS_player = "#game";
-      window.EJS_core = "snes";
-      window.EJS_gameName = "EarthBound";
-      window.EJS_color = "#0064ff";
-      window.EJS_startOnLoaded = true;
-      window.EJS_pathtodata = "code/";
-      window.EJS_gameUrl = "games/" + EJS_gameName + ".smc";
-      window.states_path = "states/";
-      window.EJS_loadStateURL = states_path + "EarthBound.state";
-      window.EJS_DEBUG_XX = true;
-    </script>
-    <script type="module">
-      let loader_path = EJS_pathtodata + "loader.js";
-
-      let startEmulator = () => {
-        let loader_script = document.createElement("script");
-        loader_script.type = "module";
-        loader_script.src = loader_path;
-        document.getElementById("script-placeholder").appendChild(loader_script);
-        document.getElementById("load-controls")?.remove();
-      };
-
-      let loadGame = async () => {
-        // Check if ROM file exists before loading
-        try {
-          let response = await fetch(EJS_gameUrl, { method: 'HEAD' });
-          if (!response.ok) {
-            document.getElementById("load-game").textContent = "ROM not found";
-            document.getElementById("load-game").disabled = true;
-            return;
-          }
-        } catch (e) {
-          document.getElementById("load-game").textContent = "ROM not found";
-          document.getElementById("load-game").disabled = true;
-          return;
-        }
-        startEmulator();
-      };
-
-      let loadRom = (e) => {
-        let file = e.target.files[0];
-        if (!file) return;
-        window.EJS_gameUrl = URL.createObjectURL(file);
-        window.EJS_gameName = file.name.replace(/\.[^.]+\$/, '');
-        // Load save state if EarthBound, otherwise skip
-        if (!/earthbound-meditation/i.test(file.name)) {
-          delete window.EJS_loadStateURL;
-        }
-        startEmulator();
-      };
-
-      document.getElementById("load-game").addEventListener("click", loadGame);
-      document.getElementById("load-rom").addEventListener("change", loadRom);
-      document.getElementById("load-game").focus();
-    </script>
-    <div id="script-placeholder"></div>
-
-        <!-- Erweiterte Logik für Tastatur & echte Gamepads -->
+    <!-- Erweiterte Logik für Tastatur & echte Gamepads -->
     <script>
       (function() {
         const activeBars = {};
         const speed = 2.5; // Geschwindigkeit der Balken
+        const heldKeys = {}; // Sperre gegen ineinanderlaufende Balken
 
         // Tasten-Mapping für Tastatur
         const keyMap = {
@@ -225,22 +52,32 @@
           }
         }
 
-        // Nutzen von capture:true, um die Tasten vor dem Emulator abzufangen!
+        // Standard-Events nutzen, OHNE passive/capture, damit das Spiel die Inputs wieder bekommt!
         window.addEventListener('keydown', (e) => { 
-          if (keyMap[e.key]) startBar(keyMap[e.key]); 
-        }, { capture: true, passive: true });
+          const action = keyMap[e.key];
+          if (action) {
+            // Verhindert, dass das Betriebssystem bei gehaltenem Tastendruck neue Balken triggert
+            if (!heldKeys[action]) {
+              heldKeys[action] = true;
+              startBar(action);
+            }
+          }
+        });
 
         window.addEventListener('keyup', (e) => { 
-          if (keyMap[e.key]) stopBar(keyMap[e.key]); 
-        }, { capture: true, passive: true });
+          const action = keyMap[e.key];
+          if (action) {
+            heldKeys[action] = false;
+            stopBar(action);
+          }
+        });
 
         const prevGamepadState = {};
 
         function renderTimeline() {
-          // Direktes Abfragen des Gamepads (wird vom Emulator nie blockiert)
+          // Gamepad abfragen (wird vom Emulator nie blockiert)
           const gamepads = navigator.getGamepads();
           if (gamepads) {
-            // Durchsuche alle angeschlossenen Gamepads
             for (let i = 0; i < gamepads.length; i++) {
               const gp = gamepads[i];
               if (!gp) continue;
@@ -260,6 +97,7 @@
             }
           }
 
+          // Balken bewegen
           const allBars = document.querySelectorAll('.input-bar');
           allBars.forEach(bar => {
             let barData = null;
