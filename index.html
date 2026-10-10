@@ -1,4 +1,3 @@
-```html
 <!doctype html>
 <html lang="en">
 <head>
@@ -9,16 +8,19 @@
   <style>
     :root {
       color-scheme: dark;
-      --hud-bg: rgba(12, 18, 23, 0.78);
+      --hud-bg: rgba(12, 18, 23, 0.82);
       --hud-border: rgba(140, 170, 185, 0.25);
       --hud-text: #eaf6f8;
       --track: rgba(180, 205, 215, 0.13);
       --accent: #00e5d0;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
-    html, body {
+    html,
+    body {
       min-height: 100%;
       margin: 0;
     }
@@ -26,7 +28,8 @@
     body {
       background: #333;
       color: #fff;
-      font-family: system-ui, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
       overflow: hidden;
     }
 
@@ -75,39 +78,60 @@
       color: #fff;
       cursor: pointer;
       text-decoration: underline;
+      text-underline-offset: 3px;
     }
 
-    #load-rom { display: none; }
+    #load-rom {
+      display: none;
+    }
 
     #load-status {
       min-height: 1.2em;
       max-width: 100%;
       overflow-wrap: anywhere;
-      color: rgba(255,255,255,.8);
-      font-size: .85rem;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.85rem;
     }
 
-    /* Vertical input timeline */
+    /* HUD toggle button */
+    #hud-toggle {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 100001;
+      padding: 8px 12px;
+      border: 1px solid var(--hud-border);
+      border-radius: 7px;
+      background: var(--hud-bg);
+      color: var(--hud-text);
+      font: 12px "Courier New", monospace;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #hud-toggle:hover {
+      background: rgba(30, 45, 52, 0.95);
+    }
+
+    /* Main vertical input timeline */
     #input-timeline-container {
       position: fixed;
       left: 12px;
       bottom: 12px;
       display: flex;
-      flex-direction: row;
-      align-items: stretch;
-      gap: 5px;
-      width: max-content;
+      align-items: flex-end;
+      gap: 2px;
+      padding: 8px 6px;
       max-width: calc(100vw - 24px);
-      padding: 8px;
       background: var(--hud-bg);
       border: 1px solid var(--hud-border);
-      border-radius: 9px;
-      box-shadow: 0 6px 24px rgba(0,0,0,.25);
+      border-radius: 10px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       color: var(--hud-text);
       font-family: "Courier New", monospace;
-      z-index: 99999;
+      z-index: 100000;
       pointer-events: none;
       user-select: none;
     }
@@ -116,29 +140,28 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 5px;
-      width: 17px;
-      margin: 0;
+      gap: 4px;
+      width: 15px;
+      flex: 0 0 15px;
     }
 
     .timeline-row .label {
-      flex: 0 0 auto;
       width: 100%;
       min-height: 12px;
       text-align: center;
-      font-size: 10px;
+      font-size: 9px;
       line-height: 12px;
       font-weight: bold;
-      color: rgba(230,245,250,.88);
+      color: rgba(230, 245, 250, 0.85);
     }
 
     .timeline-row .lane {
       position: relative;
-      flex: 0 0 72px;
-      width: 10px;
-      height: 72px;
+      flex: 0 0 140px;
+      width: 8px;
+      height: 140px;
       background: var(--track);
-      border-radius: 5px;
+      border-radius: 4px;
       overflow: hidden;
     }
 
@@ -148,77 +171,37 @@
       left: 0;
       width: 100%;
       height: 0;
-      min-height: 2px;
       background: var(--accent);
-      border-radius: 5px;
-      box-shadow: 0 0 7px rgba(0,229,208,.55);
+      border-radius: 4px;
+      box-shadow: 0 0 7px rgba(0, 229, 208, 0.55);
       will-change: height, top;
     }
 
-    /* HUD toggle */
-    #input-hud-toggle {
-      position: fixed;
-      top: 12px;
-      right: 12px;
-      z-index: 100000;
-      pointer-events: auto;
-      padding: 6px 9px;
-      border: 1px solid var(--hud-border);
-      border-radius: 7px;
-      background: rgba(12,18,23,.88);
-      color: var(--hud-text);
-      font: 600 11px/1.2 system-ui, sans-serif;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    #input-hud-toggle:hover {
-      background: rgba(25,38,45,.96);
-    }
-
-    #input-hud-toggle:focus-visible {
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-
-    #input-timeline-container.is-hidden {
-      display: none;
-    }
-
-    /* Smaller HUD in fullscreen */
+    /* Fullscreen HUD sizing */
     #input-timeline-container.is-fullscreen-hud {
+      gap: 1px;
+      padding: 5px 4px;
       left: 8px;
       bottom: 8px;
-      gap: 3px;
-      padding: 5px;
-      border-radius: 7px;
-      max-width: calc(100vw - 16px);
     }
 
     #input-timeline-container.is-fullscreen-hud .timeline-row {
-      width: 14px;
+      width: 13px;
+      flex-basis: 13px;
       gap: 3px;
     }
 
     #input-timeline-container.is-fullscreen-hud .timeline-row .label {
-      font-size: 9px;
-      line-height: 10px;
-      min-height: 10px;
+      font-size: 8px;
     }
 
     #input-timeline-container.is-fullscreen-hud .timeline-row .lane {
-      flex-basis: 54px;
-      width: 8px;
-      height: 54px;
+      flex-basis: 110px;
+      width: 7px;
+      height: 110px;
     }
 
-    #input-hud-toggle.is-fullscreen-toggle {
-      top: 7px;
-      right: 7px;
-      padding: 4px 6px;
-      font-size: 10px;
-    }
-
+    /* Keep HUD readable on small screens */
     @media (max-width: 480px) {
       #game-container {
         width: 100vw;
@@ -226,28 +209,61 @@
         aspect-ratio: 4 / 3;
       }
 
+      #hud-toggle {
+        top: 8px;
+        right: 8px;
+        padding: 7px 9px;
+      }
+
       #input-timeline-container {
-        left: 6px;
-        bottom: 6px;
-        gap: 3px;
-        padding: 5px;
-        max-width: calc(100vw - 12px);
+        left: 5px;
+        bottom: 5px;
+        gap: 2px;
+        padding: 5px 4px;
+        max-width: calc(100vw - 10px);
       }
 
       .timeline-row {
-        width: 15px;
+        width: 14px;
+        flex-basis: 14px;
         gap: 3px;
       }
 
       .timeline-row .label {
-        font-size: 9px;
+        font-size: 8px;
       }
 
       .timeline-row .lane {
-        flex-basis: 58px;
-        width: 8px;
-        height: 58px;
+        flex-basis: 100px;
+        width: 7px;
+        height: 100px;
       }
+
+      #input-timeline-container.is-fullscreen-hud {
+        gap: 1px;
+        padding: 4px 3px;
+      }
+
+      #input-timeline-container.is-fullscreen-hud .timeline-row {
+        width: 12px;
+        flex-basis: 12px;
+        gap: 2px;
+      }
+
+      #input-timeline-container.is-fullscreen-hud .timeline-row .lane {
+        flex-basis: 90px;
+        width: 6px;
+        height: 90px;
+      }
+    }
+
+    /* Hide the HUD without removing its state */
+    #input-timeline-container.hud-hidden {
+      display: none;
+    }
+
+    #hud-toggle.hud-hidden {
+      opacity: 0.65;
     }
   </style>
 </head>
@@ -266,22 +282,51 @@
 
   <aside id="input-timeline-container"
          aria-label="Controller input timeline">
-    <div class="timeline-row" data-key="up"><span class="label">↑</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="down"><span class="label">↓</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="left"><span class="label">←</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="right"><span class="label">→</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="button-y"><span class="label">Y</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="button-x"><span class="label">X</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="button-b"><span class="label">B</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="button-a"><span class="label">A</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="select"><span class="label">SEL</span><div class="lane"></div></div>
-    <div class="timeline-row" data-key="start"><span class="label">STA</span><div class="lane"></div></div>
+    <div class="timeline-row" data-key="up">
+      <span class="label">↑</span>
+      <div class="lane"></div>
+    </div>
+    <div class="timeline-row" data-key="down">
+      <span class="label">↓</span>
+      <div class="lane"></div>
+    </div>
+    <div class="timeline-row" data-key="left">
+      <span class="label">←</span>
+      <div class="lane"></div>
+    </div>
+    <div class="timeline-row" data-key="right">
+      <span class="label">→</span>
+      <div class="lane"></div>
+    </div>
+    <div class="timeline-row" data-key="button-y">
+      <span class="label">Y</span>
+      <div class="lane"></div>
+    </div>
+    <div class="timeline-row" data-key="button-x">
+      <span class="label">X</span>
+      <div class="lane"></div>
+    </div>
+    <div class="timeline-row" data-key="button-b">
+      <span class="label">B</span>
+      <div class="lane"></div>
+    </div>
+    <div class="timeline-row" data-key="button-a">
+      <span class="label">A</span>
+      <div class="lane"></div>
+    </div>
+    <div class="timeline-row" data-key="select">
+      <span class="label">SEL</span>
+      <div class="lane"></div>
+    </div>
+    <div class="timeline-row" data-key="start">
+      <span class="label">STA</span>
+      <div class="lane"></div>
+    </div>
   </aside>
 
-  <button id="input-hud-toggle"
-          type="button"
-          aria-controls="input-timeline-container"
-          aria-pressed="true">Hide HUD</button>
+  <button id="hud-toggle" type="button" aria-pressed="true">
+    Hide HUD
+  </button>
 
   <div id="script-placeholder"></div>
 
@@ -295,7 +340,8 @@
     window.EJS_pathtodata = "code/";
     window.EJS_gameUrl = "games/EarthBound.smc";
     window.states_path = "states/";
-    window.EJS_loadStateURL = window.states_path + "EarthBound.state";
+    window.EJS_loadStateURL =
+      window.states_path + "EarthBound.state";
     window.EJS_DEBUG_XX = true;
 
     (() => {
@@ -309,8 +355,8 @@
 
       function startEmulator() {
         if (emulatorStarted) return;
-        emulatorStarted = true;
 
+        emulatorStarted = true;
         loadButton.disabled = true;
         status.textContent = "Starting EmulatorJS…";
 
@@ -362,9 +408,11 @@
         const file = event.target.files?.[0];
         if (!file) return;
 
-        if (selectedRomUrl) URL.revokeObjectURL(selectedRomUrl);
-        selectedRomUrl = URL.createObjectURL(file);
+        if (selectedRomUrl) {
+          URL.revokeObjectURL(selectedRomUrl);
+        }
 
+        selectedRomUrl = URL.createObjectURL(file);
         window.EJS_gameUrl = selectedRomUrl;
         window.EJS_gameName = file.name.replace(/\.[^.]+$/, "");
 
@@ -385,52 +433,6 @@
 
   <script>
     (() => {
-      const hud = document.getElementById("input-timeline-container");
-      const toggle = document.getElementById("input-hud-toggle");
-      const hudHome = document.createComment("input HUD home");
-      const toggleHome = document.createComment("input HUD toggle home");
-
-      hud.parentNode.insertBefore(hudHome, hud);
-      toggle.parentNode.insertBefore(toggleHome, toggle);
-
-      toggle.addEventListener("click", () => {
-        const hidden = hud.classList.toggle("is-hidden");
-        toggle.textContent = hidden ? "Show HUD" : "Hide HUD";
-        toggle.setAttribute("aria-pressed", String(!hidden));
-      });
-
-      function syncFullscreenHud() {
-        const root = document.fullscreenElement;
-
-        if (root) {
-          // Fullscreen overlays must be descendants of the fullscreen element.
-          if (root !== hud.parentElement) root.appendChild(hud);
-          if (root !== toggle.parentElement) root.appendChild(toggle);
-
-          hud.classList.add("is-fullscreen-hud");
-          toggle.classList.add("is-fullscreen-toggle");
-        } else {
-          hud.classList.remove("is-fullscreen-hud");
-          toggle.classList.remove("is-fullscreen-toggle");
-
-          if (hudHome.parentNode) {
-            hudHome.parentNode.insertBefore(hud, hudHome.nextSibling);
-          }
-
-          if (toggleHome.parentNode) {
-            toggleHome.parentNode.insertBefore(toggle, toggleHome.nextSibling);
-          }
-        }
-      }
-
-      document.addEventListener("fullscreenchange", syncFullscreenHud);
-      document.addEventListener("webkitfullscreenchange", syncFullscreenHud);
-      syncFullscreenHud();
-    })();
-  </script>
-
-  <script>
-    (() => {
       const SPEED = 120;
 
       const keyboardMap = {
@@ -446,6 +448,7 @@
         Space: "select"
       };
 
+      // Standard gamepad button indices.
       const gamepadMap = {
         12: "up",
         13: "down",
@@ -520,7 +523,9 @@
         const wasHeld = isActionHeld(action);
         heldSources.set(source, action);
 
-        if (!wasHeld) startSegment(action);
+        if (!wasHeld) {
+          startSegment(action);
+        }
       }
 
       function releaseSource(source) {
@@ -529,10 +534,13 @@
 
         heldSources.delete(source);
 
-        if (!isActionHeld(action)) stopSegment(action);
+        if (!isActionHeld(action)) {
+          stopSegment(action);
+        }
       }
 
-      // Observe keyboard input without cancelling or stopping events.
+      // Observe keyboard events without cancelling or stopping them.
+      // EmulatorJS can still receive its normal keyboard input.
       window.addEventListener("keydown", event => {
         const action = keyboardMap[event.code];
         if (!action) return;
@@ -557,13 +565,16 @@
         for (const source of keyboardSources) {
           releaseSource(source);
         }
+
         keyboardSources.clear();
       }
 
       window.addEventListener("blur", releaseKeyboardInputs);
 
       document.addEventListener("visibilitychange", () => {
-        if (document.hidden) releaseKeyboardInputs();
+        if (document.hidden) {
+          releaseKeyboardInputs();
+        }
       });
 
       function renderTimeline(timestamp) {
@@ -573,6 +584,7 @@
 
         previousTime = timestamp;
 
+        // Poll connected gamepads.
         const currentGamepadSources = new Set();
         const gamepads = navigator.getGamepads
           ? navigator.getGamepads()
@@ -601,6 +613,8 @@
 
         previousGamepadSources = currentGamepadSources;
 
+        // Grow held inputs downward. Released inputs continue scrolling
+        // until they have left the bottom of their timeline lane.
         for (const segment of segments) {
           if (segment.holding) {
             segment.height += SPEED * dt;
@@ -610,7 +624,13 @@
             segment.element.style.top = `${segment.age * SPEED}px`;
           }
 
-          const laneHeight = segment.element.parentElement.clientHeight;
+          const lane = segment.element.parentElement;
+          if (!lane) {
+            segments.delete(segment);
+            continue;
+          }
+
+          const laneHeight = lane.clientHeight;
           const top = segment.holding ? 0 : segment.age * SPEED;
 
           if (top > laneHeight + segment.height) {
@@ -625,6 +645,44 @@
       requestAnimationFrame(renderTimeline);
     })();
   </script>
+
+  <script>
+    (() => {
+      const hud = document.getElementById("input-timeline-container");
+      const toggle = document.getElementById("hud-toggle");
+
+      let hudVisible = true;
+
+      function updateHudButton() {
+        toggle.textContent = hudVisible ? "Hide HUD" : "Show HUD";
+        toggle.setAttribute("aria-pressed", String(hudVisible));
+        toggle.classList.toggle("hud-hidden", !hudVisible);
+        hud.classList.toggle("hud-hidden", !hudVisible);
+      }
+
+      toggle.addEventListener("click", () => {
+        hudVisible = !hudVisible;
+        updateHudButton();
+      });
+
+      function updateFullscreenLayout() {
+        const fullscreenElement = document.fullscreenElement;
+        const isFullscreen = Boolean(fullscreenElement);
+
+        hud.classList.toggle("is-fullscreen-hud", isFullscreen);
+
+        // Keep the HUD and its toggle visible when the game container
+        // itself is fullscreen. Otherwise, keep them attached to the page.
+        if (isFullscreen && fullscreenElement.contains(hud)) {
+          fullscreenElement.appendChild(hud);
+        }
+      }
+
+      document.addEventListener("fullscreenchange", updateFullscreenLayout);
+
+      updateHudButton();
+      updateFullscreenLayout();
+    })();
+  </script>
 </body>
 </html>
-```
