@@ -1,132 +1,493 @@
-    <!-- Erweiterte Logik für Tastatur & echte Gamepads -->
-    <script>
-      (function() {
-        const activeBars = {};
-        const speed = 2.5; // Geschwindigkeit der Balken
-        const heldKeys = {}; // Sperre gegen ineinanderlaufende Balken
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EmulatorJS - EarthBound</title>
 
-        // Tasten-Mapping für Tastatur
-        const keyMap = {
-          'ArrowUp': 'up',
-          'ArrowDown': 'down',
-          'ArrowLeft': 'left',
-          'ArrowRight': 'right',
-          'x': 'button-a',
-          'z': 'button-b',
-          's': 'button-x',
-          'a': 'button-y',
-          'Enter': 'start',
-          ' ': 'select'
+  <style>
+    :root {
+      color-scheme: dark;
+      --hud-bg: rgba(12, 18, 23, 0.78);
+      --hud-border: rgba(140, 170, 185, 0.25);
+      --hud-text: #eaf6f8;
+      --track: rgba(180, 205, 215, 0.13);
+      --accent: #00e5d0;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      min-height: 100%;
+      margin: 0;
+    }
+
+    body {
+      background: #333;
+      color: #fff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+    }
+
+    #game-container {
+      position: relative;
+      width: min(640px, 100vw);
+      height: min(480px, 100vh);
+      margin: 0 auto;
+    }
+
+    #game {
+      width: 100%;
+      height: 100%;
+    }
+
+    #load-controls {
+      position: absolute;
+      z-index: 10;
+      top: 50%;
+      left: 50%;
+      width: min(90vw, 360px);
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      text-align: center;
+    }
+
+    #load-game {
+      padding: 0.45em 1.2em;
+      border: 2px solid #fff;
+      border-radius: 9px;
+      background: #000;
+      color: #fff;
+      font-size: 2rem;
+      cursor: pointer;
+    }
+
+    #load-game:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+
+    #rom-label {
+      color: #fff;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    #load-rom {
+      display: none;
+    }
+
+    #load-status {
+      min-height: 1.2em;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.85rem;
+    }
+
+    /* Input timeline HUD */
+    #input-timeline-container {
+      position: fixed;
+      left: 20px;
+      bottom: 20px;
+      width: min(300px, calc(100vw - 40px));
+      padding: 10px 12px;
+      background: var(--hud-bg);
+      border: 1px solid var(--hud-border);
+      border-radius: 10px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: var(--hud-text);
+      font-family: "Courier New", monospace;
+      z-index: 99999;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .timeline-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 16px;
+      margin: 4px 0;
+    }
+
+    .timeline-row .label {
+      flex: 0 0 30px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 0.4px;
+      color: rgba(230, 245, 250, 0.8);
+    }
+
+    .timeline-row .lane {
+      position: relative;
+      flex: 1;
+      min-width: 0;
+      height: 8px;
+      background: var(--track);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .input-bar {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+      min-width: 2px;
+      background: var(--accent);
+      border-radius: 4px;
+      box-shadow: 0 0 7px rgba(0, 229, 208, 0.55);
+      will-change: width, right;
+    }
+
+    @media (max-width: 480px) {
+      #game-container {
+        width: 100vw;
+        height: auto;
+        aspect-ratio: 4 / 3;
+      }
+
+      #input-timeline-container {
+        left: 10px;
+        bottom: 10px;
+        width: min(260px, calc(100vw - 20px));
+        padding: 7px 9px;
+      }
+
+      .timeline-row {
+        height: 14px;
+        margin: 3px 0;
+      }
+
+      .timeline-row .lane {
+        height: 7px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main id="game-container">
+    <div id="game"></div>
+
+    <div id="load-controls">
+      <button id="load-game" type="button">Enter</button>
+      <label id="rom-label" for="load-rom">or load a ROM file</label>
+      <input type="file" id="load-rom" accept=".smc,.sfc,.zip">
+      <div id="load-status" role="status" aria-live="polite"></div>
+    </div>
+  </main>
+
+  <aside id="input-timeline-container" aria-label="Controller input timeline">
+    <div class="timeline-row" data-key="up"><span class="label">↑</span><div class="lane"></div></div>
+    <div class="timeline-row" data-key="down"><span class="label">↓</span><div class="lane"></div></div>
+    <div class="timeline-row" data-key="left"><span class="label">←</span><div class="lane"></div></div>
+    <div class="timeline-row" data-key="right"><span class="label">→</span><div class="lane"></div></div>
+    <div class="timeline-row" data-key="button-y"><span class="label">Y</span><div class="lane"></div></div>
+    <div class="timeline-row" data-key="button-x"><span class="label">X</span><div class="lane"></div></div>
+    <div class="timeline-row" data-key="button-b"><span class="label">B</span><div class="lane"></div></div>
+    <div class="timeline-row" data-key="button-a"><span class="label">A</span><div class="lane"></div></div>
+    <div class="timeline-row" data-key="select"><span class="label">SEL</span><div class="lane"></div></div>
+    <div class="timeline-row" data-key="start"><span class="label">STA</span><div class="lane"></div></div>
+  </aside>
+
+  <div id="script-placeholder"></div>
+
+  <script>
+    // EmulatorJS configuration must be set before loader.js is loaded.
+    window.EJS_player = "#game";
+    window.EJS_core = "snes";
+    window.EJS_gameName = "EarthBound";
+    window.EJS_color = "#0064ff";
+    window.EJS_startOnLoaded = true;
+    window.EJS_pathtodata = "code/";
+    window.EJS_gameUrl = "games/EarthBound.smc";
+    window.states_path = "states/";
+    window.EJS_loadStateURL = window.states_path + "EarthBound.state";
+    window.EJS_DEBUG_XX = true;
+
+    (() => {
+      const loadButton = document.getElementById("load-game");
+      const romInput = document.getElementById("load-rom");
+      const status = document.getElementById("load-status");
+      const placeholder = document.getElementById("script-placeholder");
+
+      let emulatorStarted = false;
+      let selectedRomUrl = null;
+
+      function startEmulator() {
+        if (emulatorStarted) return;
+        emulatorStarted = true;
+
+        loadButton.disabled = true;
+        status.textContent = "Starting EmulatorJS…";
+
+        const loader = document.createElement("script");
+        loader.src = window.EJS_pathtodata + "loader.js";
+        loader.async = true;
+
+        loader.onload = () => {
+          document.getElementById("load-controls")?.remove();
         };
 
-        // Tasten-Mapping für standardisierte Gamepads
-        const gamepadMap = {
-          12: 'up',
-          13: 'down',
-          14: 'left',
-          15: 'right',
-          0: 'button-b',
-          1: 'button-a',
-          2: 'button-y',
-          3: 'button-x',
-          8: 'select',
-          9: 'start'
+        loader.onerror = () => {
+          emulatorStarted = false;
+          loadButton.disabled = false;
+          status.textContent =
+            "Could not load EmulatorJS. Check that code/loader.js exists.";
         };
 
-        function startBar(action) {
-          if (!action || activeBars[action]) return;
-          const lane = document.querySelector(`.timeline-row[data-key="${action}"] .lane`);
-          if (!lane) return;
+        placeholder.appendChild(loader);
+      }
 
-          const bar = document.createElement('div');
-          bar.className = 'input-bar';
-          bar.style.width = '0px';
-          lane.appendChild(bar);
+      async function loadDefaultGame() {
+        loadButton.disabled = true;
+        status.textContent = "Checking ROM…";
 
-          activeBars[action] = { element: bar, width: 0, isHolding: true };
-        }
-
-        function stopBar(action) {
-          if (action && activeBars[action]) {
-            activeBars[action].isHolding = false;
-          }
-        }
-
-        // Standard-Events nutzen, OHNE passive/capture, damit das Spiel die Inputs wieder bekommt!
-        window.addEventListener('keydown', (e) => { 
-          const action = keyMap[e.key];
-          if (action) {
-            // Verhindert, dass das Betriebssystem bei gehaltenem Tastendruck neue Balken triggert
-            if (!heldKeys[action]) {
-              heldKeys[action] = true;
-              startBar(action);
-            }
-          }
-        });
-
-        window.addEventListener('keyup', (e) => { 
-          const action = keyMap[e.key];
-          if (action) {
-            heldKeys[action] = false;
-            stopBar(action);
-          }
-        });
-
-        const prevGamepadState = {};
-
-        function renderTimeline() {
-          // Gamepad abfragen (wird vom Emulator nie blockiert)
-          const gamepads = navigator.getGamepads();
-          if (gamepads) {
-            for (let i = 0; i < gamepads.length; i++) {
-              const gp = gamepads[i];
-              if (!gp) continue;
-              
-              for (let btnIdx in gamepadMap) {
-                const action = gamepadMap[btnIdx];
-                const isPressed = gp.buttons[btnIdx]?.pressed;
-                
-                if (isPressed && !prevGamepadState[action]) {
-                  startBar(action);
-                  prevGamepadState[action] = true;
-                } else if (!isPressed && prevGamepadState[action]) {
-                  stopBar(action);
-                  prevGamepadState[action] = false;
-                }
-              }
-            }
-          }
-
-          // Balken bewegen
-          const allBars = document.querySelectorAll('.input-bar');
-          allBars.forEach(bar => {
-            let barData = null;
-            for (let action in activeBars) {
-              if (activeBars[action].element === bar) {
-                barData = activeBars[action];
-                break;
-              }
-            }
-
-            if (barData && barData.isHolding) {
-              barData.width += speed;
-              bar.style.width = barData.width + 'px';
-            } else {
-              let currentRight = parseInt(bar.style.right || 0);
-              let newRight = currentRight + speed;
-              bar.style.right = newRight + 'px';
-
-              if (newRight > 240) { bar.remove(); }
-            }
+        try {
+          const response = await fetch(window.EJS_gameUrl, {
+            method: "HEAD",
+            cache: "no-store"
           });
 
-          for (let action in activeBars) {
-            if (!activeBars[action].isHolding) { delete activeBars[action]; }
+          if (!response.ok) {
+            status.textContent =
+              "ROM not found at " + window.EJS_gameUrl +
+              ". Choose a ROM file instead.";
+            loadButton.disabled = false;
+            return;
           }
 
-          requestAnimationFrame(renderTimeline);
+          startEmulator();
+        } catch (error) {
+          status.textContent =
+            "Could not check the ROM. Choose a ROM file or check your server.";
+          loadButton.disabled = false;
+        }
+      }
+
+      function loadRom(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (selectedRomUrl) URL.revokeObjectURL(selectedRomUrl);
+        selectedRomUrl = URL.createObjectURL(file);
+
+        window.EJS_gameUrl = selectedRomUrl;
+        window.EJS_gameName = file.name.replace(/\.[^.]+$/, "");
+
+        // Only attempt the bundled state for the intended default game.
+        if (/^EarthBound\.smc$/i.test(file.name)) {
+          window.EJS_loadStateURL = window.states_path + "EarthBound.state";
+        } else {
+          delete window.EJS_loadStateURL;
+        }
+
+        startEmulator();
+      }
+
+      loadButton.addEventListener("click", loadDefaultGame);
+      romInput.addEventListener("change", loadRom);
+    })();
+  </script>
+
+  <script>
+    (() => {
+      const SPEED = 120; // Scroll speed in pixels per second.
+
+      const keyboardMap = {
+        ArrowUp: "up",
+        ArrowDown: "down",
+        ArrowLeft: "left",
+        ArrowRight: "right",
+        KeyX: "button-a",
+        KeyZ: "button-b",
+        KeyS: "button-x",
+        KeyA: "button-y",
+        Enter: "start",
+        Space: "select"
+      };
+
+      // Standard gamepad button indices.
+      const gamepadMap = {
+        12: "up",
+        13: "down",
+        14: "left",
+        15: "right",
+        0: "button-b",
+        1: "button-a",
+        2: "button-y",
+        3: "button-x",
+        8: "select",
+        9: "start"
+      };
+
+      const lanes = new Map(
+        [...document.querySelectorAll(".timeline-row")].map(row => [
+          row.dataset.key,
+          row.querySelector(".lane")
+        ])
+      );
+
+      const segments = new Set();
+      const active = new Map();
+      const heldSources = new Map();
+      const keyboardSources = new Set();
+      let previousGamepadSources = new Set();
+      let previousTime = 0;
+
+      function isActionHeld(action) {
+        for (const heldAction of heldSources.values()) {
+          if (heldAction === action) return true;
+        }
+        return false;
+      }
+
+      function startSegment(action) {
+        if (active.has(action)) return;
+
+        const lane = lanes.get(action);
+        if (!lane) return;
+
+        const element = document.createElement("div");
+        element.className = "input-bar";
+        element.style.width = "0px";
+        element.style.right = "0px";
+        lane.appendChild(element);
+
+        const segment = {
+          action,
+          element,
+          width: 0,
+          age: 0,
+          holding: true
+        };
+
+        segments.add(segment);
+        active.set(action, segment);
+      }
+
+      function stopSegment(action) {
+        const segment = active.get(action);
+        if (!segment) return;
+
+        segment.holding = false;
+        segment.age = 0;
+        active.delete(action);
+      }
+
+      function pressSource(source, action) {
+        if (heldSources.has(source)) return;
+
+        const wasHeld = isActionHeld(action);
+        heldSources.set(source, action);
+
+        if (!wasHeld) startSegment(action);
+      }
+
+      function releaseSource(source) {
+        const action = heldSources.get(source);
+        if (!action) return;
+
+        heldSources.delete(source);
+
+        if (!isActionHeld(action)) stopSegment(action);
+      }
+
+      window.addEventListener("keydown", event => {
+        const action = keyboardMap[event.code];
+        if (!action) return;
+
+        const source = "keyboard:" + event.code;
+        if (!keyboardSources.has(source)) {
+          keyboardSources.add(source);
+          pressSource(source, action);
+        }
+      });
+
+      window.addEventListener("keyup", event => {
+        const source = "keyboard:" + event.code;
+        if (!keyboardSources.has(source)) return;
+
+        keyboardSources.delete(source);
+        releaseSource(source);
+      });
+
+      function releaseKeyboardInputs() {
+        for (const source of keyboardSources) releaseSource(source);
+        keyboardSources.clear();
+      }
+
+      window.addEventListener("blur", releaseKeyboardInputs);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) releaseKeyboardInputs();
+      });
+
+      function renderTimeline(timestamp) {
+        const dt = previousTime
+          ? Math.min((timestamp - previousTime) / 1000, 0.05)
+          : 0;
+        previousTime = timestamp;
+
+        const currentGamepadSources = new Set();
+        const gamepads = navigator.getGamepads
+          ? navigator.getGamepads()
+          : [];
+
+        for (const gamepad of gamepads) {
+          if (!gamepad) continue;
+
+          for (const [index, action] of Object.entries(gamepadMap)) {
+            if (!gamepad.buttons[index]?.pressed) continue;
+
+            const source = `gamepad:${gamepad.index}:${index}`;
+            currentGamepadSources.add(source);
+
+            if (!previousGamepadSources.has(source)) {
+              pressSource(source, action);
+            }
+          }
+        }
+
+        for (const source of previousGamepadSources) {
+          if (!currentGamepadSources.has(source)) {
+            releaseSource(source);
+          }
+        }
+
+        previousGamepadSources = currentGamepadSources;
+
+        for (const segment of segments) {
+          if (segment.holding) {
+            segment.width += SPEED * dt;
+            segment.element.style.width = `${segment.width}px`;
+          } else {
+            segment.age += dt;
+            segment.element.style.right = `${segment.age * SPEED}px`;
+          }
+
+          const laneWidth = segment.element.parentElement.clientWidth;
+          const right = segment.holding ? 0 : segment.age * SPEED;
+
+          if (right > laneWidth + segment.width) {
+            segment.element.remove();
+            segments.delete(segment);
+          }
         }
 
         requestAnimationFrame(renderTimeline);
-      })();
-    </script>
+      }
+
+      requestAnimationFrame(renderTimeline);
+    })();
+  </script>
+</body>
+</html>
