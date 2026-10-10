@@ -402,6 +402,9 @@
         if (!isActionHeld(action)) stopSegment(action);
       }
 
+      // Observe keyboard events without cancelling them or changing their
+      // propagation. EmulatorJS must receive the same events as the HUD.
+      // Use bubbling phase (no capture) and never call preventDefault/stopPropagation.
       window.addEventListener("keydown", event => {
         const action = keyboardMap[event.code];
         if (!action) return;
@@ -411,7 +414,7 @@
           keyboardSources.add(source);
           pressSource(source, action);
         }
-      });
+      }, { capture: false, passive: true });
 
       window.addEventListener("keyup", event => {
         const source = "keyboard:" + event.code;
@@ -419,7 +422,7 @@
 
         keyboardSources.delete(source);
         releaseSource(source);
-      });
+      }, { capture: false, passive: true });
 
       function releaseKeyboardInputs() {
         for (const source of keyboardSources) releaseSource(source);
