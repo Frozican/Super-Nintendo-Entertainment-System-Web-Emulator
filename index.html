@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RetroPulse - EarthBound</title>
+  <h1>RetroPulse</h1>
+  <p>SNES Emulator</p>
 
   <style>
     :root {
@@ -588,7 +590,7 @@
 
       /*
        * Observe keyboard events without cancelling them or changing their
-       * propagation. EmulatorJS must receive the same events as the HUD.
+       * propagation. RetroPulse must receive the same events as the HUD.
        */
       window.addEventListener("keydown", event => {
         const action = keyboardMap[event.code];
