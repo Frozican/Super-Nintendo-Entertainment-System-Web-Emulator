@@ -340,7 +340,7 @@
 
         emulatorStarted = true;
         loadButton.disabled = true;
-        status.textContent = "Starting EmulatorJS…";
+        status.textContent = "Starting RetroPulse…";
 
         const loader = document.createElement("script");
         loader.src = window.EJS_pathtodata + "loader.js";
@@ -354,7 +354,7 @@
           emulatorStarted = false;
           loadButton.disabled = false;
           status.textContent =
-            "Could not load EmulatorJS. Check that code/loader.js exists.";
+            "Could not load RetroPulse. Check that code/loader.js exists.";
         };
 
         placeholder.appendChild(loader);
