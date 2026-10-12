@@ -190,6 +190,8 @@
   --snes-lit: #318bff;
   display: inline-block;
   padding: 18px;
+  transform: scale(var(--controller-scale, 1));
+  transform-origin: top left;
   background: #080e1b;
   border: 2px solid #40527c;
   box-shadow: 4px 4px 0 #03060d;
@@ -482,6 +484,8 @@
       function applyControllerSize() {
         const width = Number(sizeSlider.value);
         document.documentElement.style.setProperty("--controller-width", `${width}px`);
+        // The HUD width alone only changed its invisible wrapper; scale the actual controller art too.
+        document.documentElement.style.setProperty("--controller-scale", String(width / 420));
         sizeValue.value = `${width} px`;
         sizeValue.textContent = `${width} px`;
         try { localStorage.setItem("retropulse-controller-width", String(width)); } catch (_) {}
