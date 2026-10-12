@@ -97,11 +97,12 @@
       position: fixed;
       left: 18px;
       bottom: 18px;
-      width: min(390px, calc(100vw - 36px));
+      width: min(var(--controller-width, 420px), calc(100vw - 36px));
       z-index: 99999;
       user-select: none;
-      pointer-events: none;
-      width: min(420px, calc(100vw - 36px));
+      pointer-events: auto;
+      cursor: pointer;
+      touch-action: manipulation;
     }
 
 
@@ -124,6 +125,31 @@
     #input-hud-toggle:hover { background: rgba(25, 38, 45, 0.96); }
     #input-hud-toggle:focus-visible { outline: 2px solid #ff1c2e; outline-offset: 2px; }
     #input-timeline-container.is-hidden { display: none; }
+
+    #controller-size-control {
+      position: fixed;
+      top: 52px;
+      right: 12px;
+      z-index: 100000;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border: 1px solid var(--hud-border);
+      border-radius: 8px;
+      background: rgba(12, 18, 23, 0.9);
+      color: var(--hud-text);
+      font: 600 12px/1.2 system-ui, sans-serif;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    #controller-size-control.is-hidden { display: none; }
+    #controller-size-control label { white-space: nowrap; }
+    #controller-size { width: 125px; accent-color: var(--accent); cursor: pointer; }
+    #controller-size-value { min-width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+    #controller-size-control.is-fullscreen-size { top: 43px; right: 8px; padding: 6px 8px; }
+    #controller-size-control.is-fullscreen-size #controller-size { width: 100px; }
 
     #input-timeline-container.is-fullscreen-hud {
       left: 12px;
@@ -148,8 +174,10 @@
       #input-timeline-container {
         left: 10px;
         bottom: 10px;
-        width: min(310px, calc(100vw - 20px));
+        width: min(var(--controller-width, 420px), calc(100vw - 20px));
       }
+      #controller-size-control { top: 52px; right: 8px; gap: 6px; padding: 7px 8px; }
+      #controller-size { width: 90px; }
     }
 
     /* Embedded SNES input widget styles */
@@ -328,6 +356,12 @@
     aria-pressed="true"
   >Hide Controller</button>
 
+  <div id="controller-size-control" class="is-hidden" aria-label="Controller size settings">
+    <label for="controller-size">Controller size</label>
+    <input id="controller-size" type="range" min="180" max="620" step="10" value="420" aria-label="Controller width in pixels">
+    <output id="controller-size-value" for="controller-size">420 px</output>
+  </div>
+
   <div id="script-placeholder"></div>
 
   <script>
@@ -436,17 +470,67 @@
     (() => {
       const hud = document.getElementById("input-timeline-container");
       const toggle = document.getElementById("input-hud-toggle");
+      const sizeControl = document.getElementById("controller-size-control");
+      const sizeSlider = document.getElementById("controller-size");
+      const sizeValue = document.getElementById("controller-size-value");
+
+      // Apply the selected width and remember it for the next visit.
+      let savedWidth = 420;
+      try { savedWidth = Number(localStorage.getItem("retropulse-controller-width")) || 420; } catch (_) {}
+      if (savedWidth >= 180 && savedWidth <= 620) sizeSlider.value = String(savedWidth);
+
+      function applyControllerSize() {
+        const width = Number(sizeSlider.value);
+        document.documentElement.style.setProperty("--controller-width", `${width}px`);
+        sizeValue.value = `${width} px`;
+        sizeValue.textContent = `${width} px`;
+        try { localStorage.setItem("retropulse-controller-width", String(width)); } catch (_) {}
+      }
+      sizeSlider.addEventListener("input", applyControllerSize);
+      applyControllerSize();
+
+      // Tap the controller display to reveal the size slider only when needed.
+      hud.setAttribute("title", "Tap to adjust controller size");
+      hud.setAttribute("role", "button");
+      hud.setAttribute("tabindex", "0");
+
+      function showSizeControl() {
+        if (hud.classList.contains("is-hidden")) return;
+        sizeControl.classList.remove("is-hidden");
+      }
+      function hideSizeControl() {
+        sizeControl.classList.add("is-hidden");
+      }
+      hud.addEventListener("click", (event) => {
+        event.stopPropagation();
+        sizeControl.classList.toggle("is-hidden");
+      });
+      hud.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          sizeControl.classList.toggle("is-hidden");
+        }
+      });
+      sizeControl.addEventListener("click", (event) => event.stopPropagation());
+      document.addEventListener("click", (event) => {
+        if (!sizeControl.contains(event.target) && !hud.contains(event.target)) {
+          hideSizeControl();
+        }
+      });
 
       // Keep placeholders so the HUD can return to its original location.
       const hudHome = document.createComment("input HUD home");
       const toggleHome = document.createComment("input HUD toggle home");
+      const sizeControlHome = document.createComment("controller size control home");
 
       hud.parentNode.insertBefore(hudHome, hud);
       toggle.parentNode.insertBefore(toggleHome, toggle);
+      sizeControl.parentNode.insertBefore(sizeControlHome, sizeControl);
 
       // Show or hide the timeline without disabling input tracking.
       toggle.addEventListener("click", () => {
         const isHidden = hud.classList.toggle("is-hidden");
+        if (isHidden) sizeControl.classList.add("is-hidden");
 
         toggle.textContent = isHidden
           ? "Show Controller"
@@ -467,13 +551,21 @@
           if (fullscreenRoot !== toggle.parentElement) {
             fullscreenRoot.appendChild(toggle);
           }
+          if (fullscreenRoot !== sizeControl.parentElement) {
+            fullscreenRoot.appendChild(sizeControl);
+          }
 
           hud.classList.add("is-fullscreen-hud");
           toggle.classList.add("is-fullscreen-toggle");
+          sizeControl.classList.add("is-fullscreen-size");
         } else {
           hud.classList.remove("is-fullscreen-hud");
           toggle.classList.remove("is-fullscreen-toggle");
+          sizeControl.classList.remove("is-fullscreen-size");
 
+          if (sizeControlHome.parentNode) {
+            sizeControlHome.parentNode.insertBefore(sizeControl, sizeControlHome.nextSibling);
+          }
           if (hudHome.parentNode) {
             hudHome.parentNode.insertBefore(hud, hudHome.nextSibling);
           }
