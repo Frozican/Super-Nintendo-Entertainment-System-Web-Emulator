@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>RetroPulse - SNES Emulator</title>
+  <title>RetroPulse - EarthBound</title>
 
   <style>
     :root {
@@ -383,7 +383,7 @@
   <div id="script-placeholder"></div>
 
   <script>
-    // EmulatorJS configuration must be set before loader.js is loaded.
+    // RetroPulse configuration must be set before loader.js is loaded.
     window.EJS_player = "#game";
     window.EJS_core = "snes";
     window.EJS_gameName = "EarthBound";
@@ -409,7 +409,7 @@
 
         emulatorStarted = true;
         loadButton.disabled = true;
-        status.textContent = "Starting EmulatorJS…";
+        status.textContent = "Starting RetroPulse…";
 
         const loader = document.createElement("script");
         loader.src = window.EJS_pathtodata + "loader.js";
@@ -423,7 +423,7 @@
           emulatorStarted = false;
           loadButton.disabled = false;
           status.textContent =
-            "Could not load EmulatorJS. Check that code/loader.js exists.";
+            "Could not load RetroPulse. Check that code/loader.js exists.";
         };
 
         placeholder.appendChild(loader);
@@ -671,7 +671,7 @@
       const input = keyboardMap[event.code];
       if (!input) return;
       keysDown.add(input);
-      // Do not cancel or stop the event: EmulatorJS must receive it too.
+      // Do not cancel or stop the event: the emulator must receive it too.
       render();
     }
 
