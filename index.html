@@ -98,6 +98,8 @@
       left: 18px;
       bottom: 18px;
       width: min(var(--controller-width, 420px), calc(100vw - 36px));
+      /* X/Y sliders move the whole controller overlay from its anchored corner. */
+      transform: translate(var(--controller-x, 0px), var(--controller-y, 0px));
       z-index: 99999;
       user-select: none;
       pointer-events: auto;
@@ -132,9 +134,11 @@
       right: 12px;
       z-index: 100000;
       display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 8px 10px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 7px;
+      width: min(290px, calc(100vw - 20px));
+      padding: 9px 10px;
       border: 1px solid var(--hud-border);
       border-radius: 8px;
       background: rgba(12, 18, 23, 0.9);
@@ -145,11 +149,12 @@
     }
 
     #controller-size-control.is-hidden { display: none; }
+    .controller-setting { display: grid; grid-template-columns: 54px minmax(80px, 1fr) 48px; align-items: center; gap: 7px; }
     #controller-size-control label { white-space: nowrap; }
-    #controller-size { width: 125px; accent-color: var(--accent); cursor: pointer; }
-    #controller-size-value { min-width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+    #controller-size-control input[type="range"] { width: 100%; min-width: 0; accent-color: var(--accent); cursor: pointer; }
+    #controller-size-control output { min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
     #controller-size-control.is-fullscreen-size { top: 43px; right: 8px; padding: 6px 8px; }
-    #controller-size-control.is-fullscreen-size #controller-size { width: 100px; }
+    #controller-size-control.is-fullscreen-size input[type="range"] { width: 100%; }
 
     #input-timeline-container.is-fullscreen-hud {
       left: 12px;
@@ -177,7 +182,7 @@
         width: min(var(--controller-width, 420px), calc(100vw - 20px));
       }
       #controller-size-control { top: 52px; right: 8px; gap: 6px; padding: 7px 8px; }
-      #controller-size { width: 90px; }
+      .controller-setting { grid-template-columns: 48px minmax(60px, 1fr) 42px; gap: 5px; }
     }
 
     /* Embedded SNES input widget styles */
@@ -358,10 +363,22 @@
     aria-pressed="true"
   >Hide Controller</button>
 
-  <div id="controller-size-control" class="is-hidden" aria-label="Controller size settings">
-    <label for="controller-size">Controller size</label>
-    <input id="controller-size" type="range" min="180" max="620" step="10" value="420" aria-label="Controller width in pixels">
-    <output id="controller-size-value" for="controller-size">420 px</output>
+  <div id="controller-size-control" class="is-hidden" aria-label="Controller display settings">
+    <div class="controller-setting">
+      <label for="controller-size">Size</label>
+      <input id="controller-size" type="range" min="180" max="620" step="10" value="420" aria-label="Controller width in pixels">
+      <output id="controller-size-value" for="controller-size">420 px</output>
+    </div>
+    <div class="controller-setting">
+      <label for="controller-x">X position</label>
+      <input id="controller-x" type="range" min="-600" max="600" step="5" value="0" aria-label="Move controller horizontally">
+      <output id="controller-x-value" for="controller-x">0 px</output>
+    </div>
+    <div class="controller-setting">
+      <label for="controller-y">Y position</label>
+      <input id="controller-y" type="range" min="-600" max="600" step="5" value="0" aria-label="Move controller vertically">
+      <output id="controller-y-value" for="controller-y">0 px</output>
+    </div>
   </div>
 
   <div id="script-placeholder"></div>
@@ -475,23 +492,50 @@
       const sizeControl = document.getElementById("controller-size-control");
       const sizeSlider = document.getElementById("controller-size");
       const sizeValue = document.getElementById("controller-size-value");
+      const xSlider = document.getElementById("controller-x");
+      const ySlider = document.getElementById("controller-y");
+      const xValue = document.getElementById("controller-x-value");
+      const yValue = document.getElementById("controller-y-value");
 
-      // Apply the selected width and remember it for the next visit.
-      let savedWidth = 420;
-      try { savedWidth = Number(localStorage.getItem("retropulse-controller-width")) || 420; } catch (_) {}
+      // Restore the user's size and position preferences.
+      let savedWidth = 420, savedX = 0, savedY = 0;
+      try {
+        savedWidth = Number(localStorage.getItem("retropulse-controller-width")) || 420;
+        const storedX = localStorage.getItem("retropulse-controller-x");
+        const storedY = localStorage.getItem("retropulse-controller-y");
+        if (storedX !== null && Number.isFinite(Number(storedX))) savedX = Number(storedX);
+        if (storedY !== null && Number.isFinite(Number(storedY))) savedY = Number(storedY);
+      } catch (_) {}
       if (savedWidth >= 180 && savedWidth <= 620) sizeSlider.value = String(savedWidth);
+      if (savedX >= -600 && savedX <= 600) xSlider.value = String(savedX);
+      if (savedY >= -600 && savedY <= 600) ySlider.value = String(savedY);
 
       function applyControllerSize() {
         const width = Number(sizeSlider.value);
         document.documentElement.style.setProperty("--controller-width", `${width}px`);
-        // The HUD width alone only changed its invisible wrapper; scale the actual controller art too.
+        // Scale the actual controller art as well as its wrapper.
         document.documentElement.style.setProperty("--controller-scale", String(width / 420));
         sizeValue.value = `${width} px`;
         sizeValue.textContent = `${width} px`;
         try { localStorage.setItem("retropulse-controller-width", String(width)); } catch (_) {}
       }
+      function applyControllerPosition() {
+        const x = Number(xSlider.value);
+        const y = Number(ySlider.value);
+        document.documentElement.style.setProperty("--controller-x", `${x}px`);
+        document.documentElement.style.setProperty("--controller-y", `${y}px`);
+        xValue.value = `${x} px`; xValue.textContent = `${x} px`;
+        yValue.value = `${y} px`; yValue.textContent = `${y} px`;
+        try {
+          localStorage.setItem("retropulse-controller-x", String(x));
+          localStorage.setItem("retropulse-controller-y", String(y));
+        } catch (_) {}
+      }
       sizeSlider.addEventListener("input", applyControllerSize);
+      xSlider.addEventListener("input", applyControllerPosition);
+      ySlider.addEventListener("input", applyControllerPosition);
       applyControllerSize();
+      applyControllerPosition();
 
       // Tap the controller display to reveal the size slider only when needed.
       hud.setAttribute("title", "Tap to adjust controller size");
